@@ -1,11 +1,11 @@
 package com.hccake.trojan.server.channel;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.util.concurrent.Promise;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.util.concurrent.Promise;
 
-public final class DirectClientHandler extends ChannelInboundHandlerAdapter {
+public final class DirectClientHandler implements ChannelHandler {
 
 	private final Promise<Channel> promise;
 
@@ -20,7 +20,7 @@ public final class DirectClientHandler extends ChannelInboundHandlerAdapter {
 	}
 
 	@Override
-	public void exceptionCaught(ChannelHandlerContext ctx, Throwable throwable) {
+	public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable throwable) {
 		promise.setFailure(throwable);
 	}
 

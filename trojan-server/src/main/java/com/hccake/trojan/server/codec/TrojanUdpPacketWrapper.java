@@ -3,13 +3,10 @@ package com.hccake.trojan.server.codec;
 import inet.ipaddr.HostName;
 import inet.ipaddr.HostNameException;
 import inet.ipaddr.IPAddress;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.DecoderException;
-import io.netty.handler.codec.socksx.v5.Socks5AddressEncoder;
-import io.netty.handler.codec.socksx.v5.Socks5AddressType;
+import io.netty5.buffer.Buffer;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.ByteToMessageDecoder;
+import io.netty5.handler.codec.DecoderException;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -36,41 +33,40 @@ public class TrojanUdpPacketWrapper extends ByteToMessageDecoder {
 	 * </pre>
 	 * @param ctx the {@link ChannelHandlerContext} which this
 	 * {@link ByteToMessageDecoder} belongs to
-	 * @param in the {@link ByteBuf} from which to read data
-	 * @param out the {@link List} to which decoded messages should be added
+	 * @param in the {@link Buffer} from which to read data
 	 */
 	@Override
-	protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+	protected void decode(ChannelHandlerContext ctx, Buffer in) throws Exception {
 
 		// ATYP
-		ByteBuf byteBuf = ByteBufAllocator.DEFAULT.directBuffer();
+		Buffer byteBuf = ctx.bufferAllocator().allocate(1);
 
-		Socks5AddressType dstAddrType = getDstAddrType(host);
+		TrojanAddressType dstAddrType = getDstAddrType(host);
 		if (dstAddrType == null) {
 			throw new DecoderException("error host: " + host);
 		}
 		byteBuf.writeByte(dstAddrType.byteValue());
-		Socks5AddressEncoder.DEFAULT.encodeAddress(dstAddrType, host, byteBuf);
-		byteBuf.writeShort(443);
+		TrojanAddressEncoder.DEFAULT.encodeAddress(dstAddrType, host, byteBuf);
+		byteBuf.writeShort((short) 443);
 
-		byteBuf.writeShort(in.readableBytes());
-		byteBuf.writeByte('\r');
-		byteBuf.writeByte('\n');
+		byteBuf.writeShort((short) in.readableBytes());
+		byteBuf.writeByte((byte) '\r');
+		byteBuf.writeByte((byte) '\n');
 		byteBuf.writeBytes(in);
 
-		out.add(byteBuf);
+		ctx.fireChannelRead(byteBuf);
 	}
 
-	private static Socks5AddressType getDstAddrType(String host) {
+	private static TrojanAddressType getDstAddrType(String host) {
 		HostName hostName = new HostName(host);
 		try {
 			hostName.validate();
 			if (hostName.isAddress()) {
 				IPAddress addr = hostName.asAddress();
-				return addr.getIPVersion().isIPv4() ? Socks5AddressType.IPv4 : Socks5AddressType.IPv6;
+				return addr.getIPVersion().isIPv4() ? TrojanAddressType.IPv4 : TrojanAddressType.IPv6;
 			}
 			else {
-				return Socks5AddressType.DOMAIN;
+				return TrojanAddressType.DOMAIN;
 			}
 		}
 		catch (HostNameException e) {

@@ -23,15 +23,11 @@
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
-            <artifactId>netty-transport</artifactId>
+            <artifactId>netty5-transport</artifactId>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
-            <artifactId>netty-handler</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-codec-socks</artifactId>
+            <artifactId>netty5-handler</artifactId>
         </dependency>
         <!-- host 判断，是 domain 还是 ipv4 还是 ipv6 -->
         <dependency>

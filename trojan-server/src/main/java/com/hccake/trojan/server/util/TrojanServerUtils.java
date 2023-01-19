@@ -1,8 +1,7 @@
 package com.hccake.trojan.server.util;
 
-import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelFutureListeners;
 
 /**
  * @author hccake
@@ -17,7 +16,7 @@ public final class TrojanServerUtils {
 	 */
 	public static void closeOnFlush(Channel ch) {
 		if (ch.isActive()) {
-			ch.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+			ch.writeAndFlush(ch.bufferAllocator().allocate(0)).addListener(ch, ChannelFutureListeners.CLOSE);
 		}
 	}
 }

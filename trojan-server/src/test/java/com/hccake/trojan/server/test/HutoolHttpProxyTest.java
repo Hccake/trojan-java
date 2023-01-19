@@ -19,7 +19,7 @@ class HutoolHttpProxyTest {
         Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", 51837));
         String[] websites = new String[]{
                 // "https://www.google.com"
-                "http://hutool.cn/"
+                "http://hutool.cn/",  "http://www.baidu.com/",  "http://www.ballcat.cn/"
                 // "https://www.youtube.com/",
         };
 

@@ -1,20 +1,18 @@
 package com.hccake.trojan.server;
 
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.bootstrap.ServerBootstrap;
+import io.netty5.channel.ChannelOption;
+import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.MultithreadEventLoopGroup;
+import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.socket.nio.NioServerSocketChannel;
+import io.netty5.handler.logging.LogLevel;
+import io.netty5.handler.logging.LoggingHandler;
+import io.netty5.handler.ssl.SslContext;
+import io.netty5.handler.ssl.SslContextBuilder;
 
 import javax.net.ssl.SSLException;
-import java.io.File;
 import java.io.InputStream;
-import java.security.cert.CertificateException;
 
 /**
  * @author hccake
@@ -27,8 +25,8 @@ public final class TrojanServer {
     private static final int PORT = 443;
 
     public static void main(String[] args) throws Exception {
-        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        EventLoopGroup bossGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+        EventLoopGroup workerGroup = new MultithreadEventLoopGroup(NioHandler.newFactory());
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
@@ -36,7 +34,7 @@ public final class TrojanServer {
                     .handler(new LoggingHandler(LogLevel.INFO))
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
                     .childHandler(new TrojanProxyServerInitializer(sslContext()));
-            b.bind(PORT).sync().channel().closeFuture().sync();
+            b.bind(PORT).asStage().get().closeFuture().asStage().sync();
         } finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();

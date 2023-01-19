@@ -1,19 +1,16 @@
 package com.hccake.trojan.server.codec;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.DecoderException;
-import io.netty.handler.codec.ReplayingDecoder;
-import io.netty.handler.codec.socksx.v5.Socks5AddressType;
+import io.netty5.buffer.Buffer;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.ByteToMessageDecoder;
+import io.netty5.handler.codec.DecoderException;
 
-import java.util.List;
+import java.nio.ByteBuffer;
 
 /**
  * @author hccake
  */
-public class TrojanToSocks5UdpPacketDecoder extends ReplayingDecoder<ByteBuf> {
+public class TrojanToSocks5UdpPacketDecoder extends ByteToMessageDecoder {
 
 	/**
 	 * <pre>
@@ -31,41 +28,50 @@ public class TrojanToSocks5UdpPacketDecoder extends ReplayingDecoder<ByteBuf> {
 	 *  </pre>
 	 * @param ctx the {@link ChannelHandlerContext} which this
 	 * {@link ByteToMessageDecoder} belongs to
-	 * @param in the {@link ByteBuf} from which to read data
-	 * @param out the {@link List} to which decoded messages should be added
+	 * @param in the {@link Buffer} from which to read data
 	 */
 	@Override
-	protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+	protected void decode(ChannelHandlerContext ctx, Buffer in) {
+		// 先分配 10 个字节
+		Buffer socks5UdpPacket = ctx.bufferAllocator().allocate(10);
+
+		// RSV
+		socks5UdpPacket.writeShort((short) 0);
+		// FRAG
+		socks5UdpPacket.writeByte((byte) 0);
 		// ATYP
 		byte addrTypeByte = in.readByte();
-		final Socks5AddressType addrType = Socks5AddressType.valueOf(addrTypeByte);
-
-		ByteBuf socks5UdpPacket = ByteBufAllocator.DEFAULT.buffer();
-		// RSV
-		socks5UdpPacket.writeShort(0);
-		// FRAG
-		socks5UdpPacket.writeByte(0);
-		// ATYP
+		final TrojanAddressType addrType = TrojanAddressType.valueOf(addrTypeByte);
 		socks5UdpPacket.writeByte(addrTypeByte);
 
 		// DST.ADDR
-		if (addrType == Socks5AddressType.IPv4) {
-			socks5UdpPacket.writeBytes(in, 4);
+		if (addrType == TrojanAddressType.IPv4) {
+			int ipv4Length = 4;
+			ByteBuffer byteBuffer = ByteBuffer.allocateDirect(ipv4Length);
+			in.readBytes(byteBuffer);
+			socks5UdpPacket.writeBytes(byteBuffer.flip());
 		}
-		else if (addrType == Socks5AddressType.DOMAIN) {
-			short domainLength = in.readUnsignedByte();
-			socks5UdpPacket.writeByte(domainLength);
-			socks5UdpPacket.writeBytes(in, domainLength);
+		else if (addrType == TrojanAddressType.DOMAIN) {
+			short domainLength = (short) in.readUnsignedByte();
+			socks5UdpPacket.writeByte((byte) domainLength);
+			ByteBuffer byteBuffer = ByteBuffer.allocateDirect(domainLength);
+			in.readBytes(byteBuffer);
+			socks5UdpPacket.writeBytes(byteBuffer.flip());
 		}
-		else if (addrType == Socks5AddressType.IPv6) {
-			socks5UdpPacket.writeBytes(in, 16);
+		else if (addrType == TrojanAddressType.IPv6) {
+			int ipv6Length = 16;
+			ByteBuffer byteBuffer = ByteBuffer.allocateDirect(ipv6Length);
+			in.readBytes(byteBuffer);
+			socks5UdpPacket.writeBytes(byteBuffer.flip());
 		}
 		else {
 			throw new DecoderException("error addrType: " + addrType);
 		}
 
 		// DST.PORT
-		socks5UdpPacket.writeBytes(in, 2);
+		ByteBuffer portByteBuffer = ByteBuffer.allocateDirect(2);
+		in.readBytes(portByteBuffer);
+		socks5UdpPacket.writeBytes(portByteBuffer.flip());
 
 		// payload length
 		int length = in.readUnsignedShort();
@@ -75,9 +81,11 @@ public class TrojanToSocks5UdpPacketDecoder extends ReplayingDecoder<ByteBuf> {
 			throw new DecoderException("error trojan udp message, not CRLF");
 		}
 
-		socks5UdpPacket.writeBytes(in, length);
+		ByteBuffer payloadByteBuffer = ByteBuffer.allocateDirect(length);
+		in.readBytes(payloadByteBuffer);
+		socks5UdpPacket.writeBytes(payloadByteBuffer.flip());
 
-		out.add(socks5UdpPacket);
+		ctx.fireChannelRead(socks5UdpPacket);
 	}
 
 }

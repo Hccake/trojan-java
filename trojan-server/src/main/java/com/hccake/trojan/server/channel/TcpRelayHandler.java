@@ -1,15 +1,14 @@
 package com.hccake.trojan.server.channel;
 
 import com.hccake.trojan.server.util.TrojanServerUtils;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.util.ReferenceCountUtil;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public final class TcpRelayHandler extends ChannelInboundHandlerAdapter {
+public final class TcpRelayHandler implements ChannelHandler {
 
 	private final Channel relayChannel;
 
@@ -19,7 +18,7 @@ public final class TcpRelayHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) {
-		ctx.writeAndFlush(Unpooled.EMPTY_BUFFER);
+		ctx.writeAndFlush(ctx.bufferAllocator().allocate(0));
 	}
 
 	@Override
@@ -40,7 +39,7 @@ public final class TcpRelayHandler extends ChannelInboundHandlerAdapter {
 	}
 
 	@Override
-	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+	public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
 		String message = cause.getMessage();
 		Channel channel = ctx.channel();
 		if (message.startsWith("远程主机强迫关闭了一个现有的连接") || message.startsWith("An existing connection was forcibly closed")

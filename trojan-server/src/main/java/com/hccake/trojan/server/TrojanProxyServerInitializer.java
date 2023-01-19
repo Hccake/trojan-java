@@ -1,12 +1,12 @@
 package com.hccake.trojan.server;
 
 import com.hccake.trojan.server.channel.TrojanMessageHandler;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.ssl.SslContext;
+import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.socket.SocketChannel;
+import io.netty5.handler.logging.LogLevel;
+import io.netty5.handler.logging.LoggingHandler;
+import io.netty5.handler.ssl.SslContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -23,7 +23,7 @@ public final class TrojanProxyServerInitializer extends ChannelInitializer<Socke
 	public void initChannel(SocketChannel ch) {
 		ChannelPipeline pipeline = ch.pipeline();
 		pipeline.addLast("LoggingHandler", new LoggingHandler(LogLevel.DEBUG));
-		pipeline.addLast(sslContext.newHandler(ch.alloc()));
+		pipeline.addLast(sslContext.newHandler(ch.bufferAllocator()));
 		pipeline.addLast(new TrojanMessageHandler());
 	}
 

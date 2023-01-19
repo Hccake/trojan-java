@@ -18,14 +18,14 @@
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <netty.version>4.1.87.Final</netty.version>
+        <netty.version>5.0.0.Alpha5</netty.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>io.netty</groupId>
-                <artifactId>netty-bom</artifactId>
+                <artifactId>netty5-bom</artifactId>
                 <version>${netty.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
