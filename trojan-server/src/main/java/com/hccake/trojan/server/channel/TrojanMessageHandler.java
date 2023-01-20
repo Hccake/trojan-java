@@ -1,18 +1,17 @@
 package com.hccake.trojan.server.channel;
 
-import com.hccake.trojan.server.codec.TrojanAddressDecoder;
-import com.hccake.trojan.server.codec.TrojanAddressType;
-import com.hccake.trojan.server.codec.TrojanCommandType;
+import com.hccake.trojan.server.codec.*;
 import com.hccake.trojan.server.exception.TrojanProtocolException;
 import com.hccake.trojan.server.util.TrojanServerUtils;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.buffer.Buffer;
-import io.netty5.buffer.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.SimpleChannelInboundHandler;
+import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
+import io.netty5.handler.flow.FlowControlHandler;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import lombok.extern.slf4j.Slf4j;
@@ -29,10 +28,16 @@ public final class TrojanMessageHandler extends SimpleChannelInboundHandler<Buff
     private final Bootstrap b = new Bootstrap();
 
     @Override
+    public void channelActive(ChannelHandlerContext ctx) {
+        // 设置了 autoRead 为 false，所以这里需要手动 read 下
+        ctx.read();
+    }
+
+    @Override
     public void messageReceived(final ChannelHandlerContext ctx, final Buffer message) throws Exception {
-        ctx.pipeline().remove(this);
-        // 关闭自动读取，等建连后，直接将后续的数据直接转发到
-        ctx.channel().setOption(ChannelOption.AUTO_READ, false);
+        // 直接删除当前 handler
+        ctx.pipeline().remove(TrojanMessageHandler.class);
+        // 先记录消息 index, 在异常时 reset
         int readerIndex = message.readerOffset();
         try {
             handleTrojanMessage(ctx, message);
@@ -54,14 +59,15 @@ public final class TrojanMessageHandler extends SimpleChannelInboundHandler<Buff
 
         final Channel inboundChannel = ctx.channel();
         b.group(inboundChannel.executor()).channel(NioSocketChannel.class)
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000).option(ChannelOption.SO_KEEPALIVE, true)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
+                .option(ChannelOption.SO_KEEPALIVE, true)
                 .handler(new DirectClientHandler(promise));
 
         b.connect("127.0.0.1", 80).addListener(future -> {
             if (future.isSuccess()) {
                 // Connection established use handler provided results
                 Channel outboundChannel = future.getNow();
-                bindChannel(inboundChannel, outboundChannel, message);
+                bindChannelAndWrite(inboundChannel, outboundChannel, message);
             } else {
                 // Close the connection if the connection attempt has failed.
                 TrojanServerUtils.closeOnFlush(inboundChannel);
@@ -102,9 +108,6 @@ public final class TrojanMessageHandler extends SimpleChannelInboundHandler<Buff
         if (!(cmdType.equals(TrojanCommandType.CONNECT) || cmdType.equals(TrojanCommandType.UDP_ASSOCIATE))) {
             throw new TrojanProtocolException("error cmd type");
         }
-        log.trace("trojan cmdType :{}", cmdType);
-
-        // TODO 添加流量校验和统计
 
         // ATYP address type of following address
         // o IP V4 address: X'01'
@@ -113,13 +116,16 @@ public final class TrojanMessageHandler extends SimpleChannelInboundHandler<Buff
         final TrojanAddressType dstAddrType = TrojanAddressType.valueOf(message.readByte());
         final String dstAddr = TrojanAddressDecoder.DEFAULT.decodeAddress(dstAddrType, message);
         final int dstPort = message.readUnsignedShort();
-        log.debug("请求目标地址为：[{}:{}]", dstAddr, dstPort);
+        log.debug("cmdType: {}, 请求目标地址为：[{}:{}]", cmdType, dstAddr, dstPort);
+
+        // skip CRLF
+        message.skipReadableBytes(2);
+
+        // TODO 添加流量校验和统计
+        final Channel userChannel = ctx.channel();
 
         // TCP 则读取下剩余的数据
         if (TrojanCommandType.CONNECT.equals(cmdType)) {
-            // Connection established use handler provided results
-            // skip CRLF
-            message.skipReadableBytes(2);
             int payloadLength = message.readableBytes();
             log.info("payload 长度为：{}", payloadLength);
             ByteBuffer payload = ByteBuffer.allocateDirect(payloadLength);
@@ -127,19 +133,17 @@ public final class TrojanMessageHandler extends SimpleChannelInboundHandler<Buff
             Buffer payloadBuffer = ctx.bufferAllocator().allocate(payloadLength);
             payloadBuffer.writeBytes(payload.flip());
 
-            final Channel inboundChannel = ctx.channel();
-
             Promise<Channel> promise = ctx.executor().newPromise();
             promise.asFuture().addListener(future -> {
                 final Channel outboundChannel = future.getNow();
                 if (future.isSuccess()) {
-                    bindChannel(inboundChannel, outboundChannel, payloadBuffer);
+                    bindChannelAndWrite(userChannel, outboundChannel, payloadBuffer);
                 } else {
-                    TrojanServerUtils.closeOnFlush(ctx.channel());
+                    TrojanServerUtils.closeOnFlush(userChannel);
                 }
             });
 
-            b.group(inboundChannel.executor())
+            b.group(userChannel.executor())
                     .channel(NioSocketChannel.class)
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
                     .option(ChannelOption.SO_KEEPALIVE, true)
@@ -151,14 +155,43 @@ public final class TrojanMessageHandler extends SimpleChannelInboundHandler<Buff
                     TrojanServerUtils.closeOnFlush(ctx.channel());
                 }
             });
+        } else {
+            Promise<Channel> promise = ctx.executor().newPromise();
+            promise.asFuture().addListener(futureListener -> {
+                final Channel outboundChannel = futureListener.getNow();
+                if (futureListener.isSuccess()) {
+                    outboundChannel.pipeline().addLast(new TcpRelayHandler(userChannel));
+
+                    userChannel.pipeline().addLast(new TrojanUdpPacketEncoder());
+                    userChannel.pipeline().addLast(new TrojanUdpPacketDecoder());
+                    userChannel.pipeline().addLast(new TcpRelayHandler(outboundChannel));
+                    userChannel.pipeline().remove(FlowControlHandler.class);
+                    userChannel.setOption(ChannelOption.AUTO_READ, true);
+                } else {
+                    TrojanServerUtils.closeOnFlush(userChannel);
+                }
+            });
+
+            Bootstrap udpBootStrap = new Bootstrap();
+            udpBootStrap.group(userChannel.executor())
+                    .channel(NioDatagramChannel.class)
+                    .handler(new DirectClientHandler(promise));
+
+            udpBootStrap.bind(0).addListener(futureListener -> {
+                if (!futureListener.isSuccess()) {
+                    TrojanServerUtils.closeOnFlush(userChannel);
+                }
+            });
         }
     }
 
-    private static void bindChannel(Channel inboundChannel, Channel outboundChannel, Buffer message) {
-        Future<Void> responseFuture = outboundChannel.writeAndFlush(message);
+    private static void bindChannelAndWrite(Channel inboundChannel, Channel outboundChannel, Object writeData) {
+        Future<Void> responseFuture = outboundChannel.writeAndFlush(writeData);
         responseFuture.addListener(channelFuture -> {
             outboundChannel.pipeline().addLast(new TcpRelayHandler(inboundChannel));
+
             inboundChannel.pipeline().addLast(new TcpRelayHandler(outboundChannel));
+            inboundChannel.pipeline().remove(FlowControlHandler.class);
             inboundChannel.setOption(ChannelOption.AUTO_READ, true);
         });
     }

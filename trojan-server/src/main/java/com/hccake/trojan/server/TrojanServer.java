@@ -33,7 +33,8 @@ public final class TrojanServer {
                     .channel(NioServerSocketChannel.class)
                     .handler(new LoggingHandler(LogLevel.INFO))
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
-                    .childHandler(new TrojanProxyServerInitializer(sslContext()));
+                    .childHandler(new TrojanProxyServerInitializer(sslContext()))
+                    .childOption(ChannelOption.AUTO_READ, false);
             b.bind(PORT).asStage().get().closeFuture().asStage().sync();
         } finally {
             bossGroup.shutdownGracefully();

@@ -4,6 +4,7 @@ import com.hccake.trojan.server.channel.TrojanMessageHandler;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.socket.SocketChannel;
+import io.netty5.handler.flow.FlowControlHandler;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.handler.ssl.SslContext;
@@ -24,6 +25,8 @@ public final class TrojanProxyServerInitializer extends ChannelInitializer<Socke
 		ChannelPipeline pipeline = ch.pipeline();
 		pipeline.addLast("LoggingHandler", new LoggingHandler(LogLevel.DEBUG));
 		pipeline.addLast(sslContext.newHandler(ch.bufferAllocator()));
+		// 流量管控，某些情况下 autoread false 不起作用
+		pipeline.addLast(new FlowControlHandler());
 		pipeline.addLast(new TrojanMessageHandler());
 	}
 
