@@ -1,4 +1,4 @@
-package com.hccake.trojan.server.test;
+package com.hccake.trojan.server.test.http;
 
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
@@ -16,7 +16,7 @@ class HutoolHttpProxyTest {
     @Test
     void socks5ProxyTest() {
 
-        Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", 51837));
+        Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", 7890));
         String[] websites = new String[]{
                 // "https://www.google.com"
                 "http://hutool.cn/",  "http://www.baidu.com/",  "http://www.ballcat.cn/"
