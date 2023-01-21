@@ -8,11 +8,11 @@ import io.netty5.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public final class TcpRelayHandler implements ChannelHandler {
+public final class RelayHandler implements ChannelHandler {
 
 	private final Channel relayChannel;
 
-	public TcpRelayHandler(Channel relayChannel) {
+	public RelayHandler(Channel relayChannel) {
 		this.relayChannel = relayChannel;
 	}
 

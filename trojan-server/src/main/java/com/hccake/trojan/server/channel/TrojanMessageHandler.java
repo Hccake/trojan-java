@@ -160,11 +160,11 @@ public final class TrojanMessageHandler extends SimpleChannelInboundHandler<Buff
             promise.asFuture().addListener(futureListener -> {
                 final Channel outboundChannel = futureListener.getNow();
                 if (futureListener.isSuccess()) {
-                    outboundChannel.pipeline().addLast(new TcpRelayHandler(userChannel));
+                    outboundChannel.pipeline().addLast(new RelayHandler(userChannel));
 
                     userChannel.pipeline().addLast(new TrojanUdpPacketEncoder());
                     userChannel.pipeline().addLast(new TrojanUdpPacketDecoder());
-                    userChannel.pipeline().addLast(new TcpRelayHandler(outboundChannel));
+                    userChannel.pipeline().addLast(new RelayHandler(outboundChannel));
                     userChannel.pipeline().remove(FlowControlHandler.class);
                     userChannel.setOption(ChannelOption.AUTO_READ, true);
                 } else {
@@ -188,9 +188,9 @@ public final class TrojanMessageHandler extends SimpleChannelInboundHandler<Buff
     private static void bindChannelAndWrite(Channel inboundChannel, Channel outboundChannel, Object writeData) {
         Future<Void> responseFuture = outboundChannel.writeAndFlush(writeData);
         responseFuture.addListener(channelFuture -> {
-            outboundChannel.pipeline().addLast(new TcpRelayHandler(inboundChannel));
+            outboundChannel.pipeline().addLast(new RelayHandler(inboundChannel));
 
-            inboundChannel.pipeline().addLast(new TcpRelayHandler(outboundChannel));
+            inboundChannel.pipeline().addLast(new RelayHandler(outboundChannel));
             inboundChannel.pipeline().remove(FlowControlHandler.class);
             inboundChannel.setOption(ChannelOption.AUTO_READ, true);
         });
