@@ -19,15 +19,17 @@ class HutoolHttpProxyTest {
         Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", 7890));
         String[] websites = new String[]{
                 // "https://www.google.com"
-                "http://hutool.cn/",  "http://www.baidu.com/",  "http://www.ballcat.cn/"
-                // "https://www.youtube.com/",
+                "http://hutool.cn/"
+                , "http://www.baidu.com/"
+                , "http://www.ballcat.cn/"
+                // , "https://www.youtube.com/"
         };
 
         for (String website : websites) {
             HttpRequest httpRequest = HttpRequest.get(website)
-					.setProxy(proxy)
-					.setConnectionTimeout(30000)
-					.setReadTimeout(30000);
+                    .setProxy(proxy)
+                    .setConnectionTimeout(30000)
+                    .setReadTimeout(30000);
             try (HttpResponse httpResponse = httpRequest.execute()) {
                 String result = httpResponse.body();
                 System.out.println(result);

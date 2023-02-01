@@ -1,6 +1,7 @@
 package com.hccake.trojan.server;
 
 import com.hccake.trojan.server.channel.TrojanMessageHandler;
+import com.hccake.trojan.server.codec.TrojanMessageDecoder;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.socket.SocketChannel;
@@ -27,6 +28,7 @@ public final class TrojanProxyServerInitializer extends ChannelInitializer<Socke
 		pipeline.addLast(sslContext.newHandler(ch.bufferAllocator()));
 		// 流量管控，某些情况下 autoread false 不起作用
 		pipeline.addLast(new FlowControlHandler());
+		pipeline.addLast(new TrojanMessageDecoder());
 		pipeline.addLast(new TrojanMessageHandler());
 	}
 
