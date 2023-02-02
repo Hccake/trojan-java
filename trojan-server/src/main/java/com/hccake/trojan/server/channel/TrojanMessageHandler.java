@@ -6,14 +6,13 @@ import com.hccake.trojan.server.util.TrojanServerUtils;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.buffer.Buffer;
 import io.netty5.channel.*;
+import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.flow.FlowControlHandler;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.Optional;
 
 /**
  * @author hccake
@@ -91,9 +90,9 @@ public final class TrojanMessageHandler extends SimpleChannelInboundHandler<Troj
         // TODO 添加流量校验和统计
         final Channel userChannel = ctx.channel();
 
-        // TCP 则读取下剩余的数据
+        Buffer payload = trojanMessage.getPayload();
+
         if (TrojanCommandType.CONNECT.equals(cmdType)) {
-            Buffer payload = trojanMessage.getPayload();
             Promise<Channel> promise = ctx.executor().newPromise();
             promise.asFuture().addListener(future -> {
                 final Channel outboundChannel = future.getNow();
@@ -129,6 +128,11 @@ public final class TrojanMessageHandler extends SimpleChannelInboundHandler<Troj
                     userChannelPipeline.addLast(new RelayHandler(outboundChannel));
                     userChannelPipeline.remove(FlowControlHandler.class);
                     userChannel.setOption(ChannelOption.AUTO_READ, true);
+
+                    if (payload != null) {
+                        DatagramPacket datagramPacket = TrojanUdpPacketDecoder.getDatagramPacket(ctx, payload);
+                        outboundChannel.writeAndFlush(datagramPacket);
+                    }
                 } else {
                     TrojanServerUtils.closeOnFlush(userChannel);
                 }
