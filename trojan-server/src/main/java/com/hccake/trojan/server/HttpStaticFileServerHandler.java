@@ -1,4 +1,4 @@
-package com.hccake.trojan.server.http;
+package com.hccake.trojan.server;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelFutureListeners;
