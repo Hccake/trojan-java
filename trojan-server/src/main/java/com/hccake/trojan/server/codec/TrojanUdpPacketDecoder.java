@@ -32,6 +32,11 @@ public class TrojanUdpPacketDecoder extends ByteToMessageDecoder {
      */
     @Override
     protected void decode(ChannelHandlerContext ctx, Buffer in) throws Exception {
+        DatagramPacket datagramPacket = getDatagramPacket(ctx, in);
+        ctx.fireChannelRead(datagramPacket);
+    }
+
+    public static DatagramPacket getDatagramPacket(ChannelHandlerContext ctx, Buffer in) throws Exception {
         /*
          * 获取 UDP 数据包部分，udp 的实际请求地址根据这里的 addr 和 port 走
          * +------+----------+----------+--------+---------+----------+
@@ -58,7 +63,7 @@ public class TrojanUdpPacketDecoder extends ByteToMessageDecoder {
         dataBuffer.writeBytes(dataByteBuffer.flip());
 
         SocketAddress socketAddress = ctx.channel().remoteAddress();
-        ctx.fireChannelRead(new DatagramPacket(dataBuffer, new InetSocketAddress(dstAddr, dstPort), socketAddress));
+        return new DatagramPacket(dataBuffer, new InetSocketAddress(dstAddr, dstPort), socketAddress);
     }
 
 }

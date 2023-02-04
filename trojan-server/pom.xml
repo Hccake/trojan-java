@@ -29,6 +29,10 @@
             <groupId>io.netty</groupId>
             <artifactId>netty5-handler</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty5-codec-http</artifactId>
+        </dependency>
         <!-- host 判断，是 domain 还是 ipv4 还是 ipv6 -->
         <dependency>
             <groupId>com.github.seancfoley</groupId>
@@ -73,6 +77,13 @@
             <artifactId>fengyouchao-sockslib</artifactId>
             <version>1.0.6</version>
             <scope>test</scope>
+        </dependency>
+
+        <!-- Needed on Java11 and later -->
+        <dependency>
+            <groupId>com.sun.activation</groupId>
+            <artifactId>javax.activation</artifactId>
+            <version>1.2.0</version>
         </dependency>
     </dependencies>
 

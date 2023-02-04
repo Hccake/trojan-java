@@ -9,6 +9,7 @@ import io.netty5.channel.*;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
+import io.netty5.handler.codec.DecoderException;
 import io.netty5.handler.flow.FlowControlHandler;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -35,53 +36,27 @@ public final class TrojanMessageHandler extends SimpleChannelInboundHandler<Troj
         ctx.pipeline().remove(TrojanMessageHandler.class);
 
         // 先记录消息 index, 在异常时 reset
-        try {
-            handleTrojanMessage(ctx, trojanMessage);
-        } catch (TrojanProtocolException trojanProtocolException) {
-            log.warn("not a trojan protocol message: " + trojanProtocolException.getMessage());
-            // redirectToHtml(ctx, message);
-        }
+        handleTrojanMessage(ctx, trojanMessage);
     }
 
     @Override
     public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        log.error("trojan 处理异常", cause);
+        log.error("trojan proxy error", cause);
         TrojanServerUtils.closeOnFlush(ctx.channel());
-    }
-
-    private void redirectToHtml(ChannelHandlerContext ctx, Buffer message) {
-        Promise<Channel> promise = ctx.executor().newPromise();
-
-        final Channel inboundChannel = ctx.channel();
-        b.group(inboundChannel.executor()).channel(NioSocketChannel.class)
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
-                .option(ChannelOption.SO_KEEPALIVE, true)
-                .handler(new DirectClientHandler(promise));
-
-        b.connect("127.0.0.1", 80).addListener(future -> {
-            if (future.isSuccess()) {
-                // Connection established use handler provided results
-                Channel outboundChannel = future.getNow();
-                bindChannelAndWrite(inboundChannel, outboundChannel, message);
-            } else {
-                // Close the connection if the connection attempt has failed.
-                TrojanServerUtils.closeOnFlush(inboundChannel);
-            }
-        });
     }
 
     private void handleTrojanMessage(ChannelHandlerContext ctx, TrojanMessage trojanMessage) throws Exception {
         // TODO trojanKey 校验
         String trojanKey = trojanMessage.getKey();
         if (!"28D0BDD80B63FE9C847B405FD86A51CD9D4E7C66AF99D61B6DD579B7".equalsIgnoreCase(trojanKey)) {
-            throw new TrojanProtocolException("error request hash");
+            throw new RuntimeException("error request hash");
         }
 
         TrojanRequest trojanRequest = trojanMessage.getTrojanRequest();
         TrojanCommandType cmdType = trojanRequest.getCommandType();
         // 只支持 tcp 和 udp
         if (!(cmdType.equals(TrojanCommandType.CONNECT) || cmdType.equals(TrojanCommandType.UDP_ASSOCIATE))) {
-            throw new TrojanProtocolException("unsupported cmd type: " + cmdType);
+            throw new RuntimeException("unsupported cmd type: " + cmdType);
         }
         final String dstAddr = trojanRequest.getDstAddr();
         final int dstPort = trojanRequest.getDstPort();

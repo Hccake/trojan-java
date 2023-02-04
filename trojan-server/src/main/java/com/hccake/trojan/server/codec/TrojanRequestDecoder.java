@@ -1,6 +1,5 @@
 package com.hccake.trojan.server.codec;
 
-import com.hccake.trojan.server.exception.TrojanProtocolException;
 import io.netty5.buffer.Buffer;
 
 /**

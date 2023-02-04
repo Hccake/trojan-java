@@ -46,6 +46,9 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 public class TrojanMessageDecoder extends ByteToMessageDecoder {
 
+    private static final String ERROR_REQUEST_MESSAGE = "error request message";
+
+
     public TrojanMessageDecoder() {
         this.setSingleDecode(true);
     }
@@ -63,16 +66,22 @@ public class TrojanMessageDecoder extends ByteToMessageDecoder {
         // 后续两个是 CRLF
         if (in.readByte() != '\r' || in.readByte() != '\n') {
             in.readerOffset(readerOffset);
-            throw new TrojanProtocolException("error request message");
+            throw new TrojanProtocolException(ERROR_REQUEST_MESSAGE, in.copy());
         }
 
         // like socks5
-        TrojanRequest trojanRequest = TrojanRequestDecoder.DEFAULT.decodeRequest(in);
+        TrojanRequest trojanRequest;
+        try {
+            trojanRequest = TrojanRequestDecoder.DEFAULT.decodeRequest(in);
+        } catch (Exception ex) {
+            log.error("trojan request decode error", ex);
+            throw new TrojanProtocolException(ERROR_REQUEST_MESSAGE, in.copy());
+        }
 
         // 后续两个是 CRLF
         if (in.readByte() != '\r' || in.readByte() != '\n') {
             in.readerOffset(readerOffset);
-            throw new TrojanProtocolException("error request message");
+            throw new TrojanProtocolException(ERROR_REQUEST_MESSAGE, in.copy());
         }
 
         // 载荷
