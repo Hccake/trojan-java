@@ -1,7 +1,8 @@
 package com.hccake.trojan.server.channel;
 
+import com.hccake.trojan.server.account.Account;
+import com.hccake.trojan.server.account.AccountService;
 import com.hccake.trojan.server.codec.*;
-import com.hccake.trojan.server.exception.TrojanProtocolException;
 import com.hccake.trojan.server.util.TrojanServerUtils;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.buffer.Buffer;
@@ -9,7 +10,6 @@ import io.netty5.channel.*;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
-import io.netty5.handler.codec.DecoderException;
 import io.netty5.handler.flow.FlowControlHandler;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -22,6 +22,12 @@ import lombok.extern.slf4j.Slf4j;
 public final class TrojanMessageHandler extends SimpleChannelInboundHandler<TrojanMessage> {
 
     private final Bootstrap b = new Bootstrap();
+
+    private final AccountService accountService;
+
+    public TrojanMessageHandler(AccountService accountService) {
+        this.accountService = accountService;
+    }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
@@ -46,9 +52,9 @@ public final class TrojanMessageHandler extends SimpleChannelInboundHandler<Troj
     }
 
     private void handleTrojanMessage(ChannelHandlerContext ctx, TrojanMessage trojanMessage) throws Exception {
-        // TODO trojanKey 校验
         String trojanKey = trojanMessage.getKey();
-        if (!"28D0BDD80B63FE9C847B405FD86A51CD9D4E7C66AF99D61B6DD579B7".equalsIgnoreCase(trojanKey)) {
+        Account account = accountService.findByKey(trojanKey);
+        if (account == null) {
             throw new RuntimeException("error request hash");
         }
 

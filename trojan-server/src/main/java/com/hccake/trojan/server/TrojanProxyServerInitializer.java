@@ -1,5 +1,6 @@
 package com.hccake.trojan.server;
 
+import com.hccake.trojan.server.account.AccountService;
 import com.hccake.trojan.server.channel.AntiDetectionHandler;
 import com.hccake.trojan.server.channel.TrojanMessageHandler;
 import com.hccake.trojan.server.codec.TrojanMessageDecoder;
@@ -22,6 +23,8 @@ public final class TrojanProxyServerInitializer extends ChannelInitializer<Socke
 
 	private final SslContext sslContext;
 
+	private final AccountService accountService;
+
 	@Override
 	public void initChannel(SocketChannel ch) {
 		ChannelPipeline pipeline = ch.pipeline();
@@ -31,7 +34,7 @@ public final class TrojanProxyServerInitializer extends ChannelInitializer<Socke
 		pipeline.addLast(new FlowControlHandler());
 		pipeline.addLast(new TrojanMessageDecoder());
 		pipeline.addLast(new AntiDetectionHandler());
-		pipeline.addLast(new TrojanMessageHandler());
+		pipeline.addLast(new TrojanMessageHandler(accountService));
 	}
 
 }

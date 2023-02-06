@@ -1,5 +1,8 @@
 package com.hccake.trojan.server;
 
+import com.hccake.trojan.server.account.Account;
+import com.hccake.trojan.server.account.AccountService;
+import com.hccake.trojan.server.account.InMemoryAccountService;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOption;
@@ -40,7 +43,7 @@ public class TrojanServer {
                 .channel(NioServerSocketChannel.class)
                 .handler(new LoggingHandler(LogLevel.INFO))
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
-                .childHandler(new TrojanProxyServerInitializer(sslContext()))
+                .childHandler(new TrojanProxyServerInitializer(sslContext(), accountService()))
                 .childOption(ChannelOption.AUTO_READ, false);
 
         Channel ch = b.bind(TROJAN_PORT).asStage().get();
@@ -57,6 +60,12 @@ public class TrojanServer {
                 .getResourceAsStream("/certificate/localhost.crt");
         sslCtx = SslContextBuilder.forServer(keyCertChainInputStream, keyInputStream).build();
         return sslCtx;
+    }
+
+    private AccountService accountService() {
+        // a123456 TODO 后续抽取到配置文件中
+        Account account = new Account("28d0bdd80b63fe9c847b405fd86a51cd9d4e7c66af99d61b6dd579b7");
+        return new InMemoryAccountService(account);
     }
 
 }
