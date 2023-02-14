@@ -20,6 +20,15 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class AntiDetectionHandler implements ChannelHandler {
 
+    private final String redirectHost;
+
+    private final int redirectPort;
+
+    public AntiDetectionHandler(String redirectHost, int redirectPort) {
+        this.redirectHost = redirectHost;
+        this.redirectPort = redirectPort;
+    }
+
     @Override
     public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         Throwable ex = cause;
@@ -48,7 +57,7 @@ public class AntiDetectionHandler implements ChannelHandler {
                 .option(ChannelOption.SO_KEEPALIVE, true)
                 .handler(new DirectClientHandler(promise));
 
-        b.connect("127.0.0.1", 80).addListener(future -> {
+        b.connect(redirectHost, redirectPort).addListener(future -> {
             if (future.isSuccess()) {
                 // Connection established use handler provided results
                 Channel outboundChannel = future.getNow();
