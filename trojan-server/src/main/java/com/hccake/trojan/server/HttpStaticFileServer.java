@@ -1,5 +1,6 @@
 package com.hccake.trojan.server;
 
+import com.hccake.trojan.server.env.TrojanServerProperties;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelInitializer;
@@ -19,15 +20,16 @@ import io.netty5.util.concurrent.Future;
  */
 public class HttpStaticFileServer {
 
-    public static final int PORT = 80;
     private static final int MAX_CONTENT_LENGTH = 65536;
 
     private final EventLoopGroup bossGroup;
     private final EventLoopGroup workerGroup;
+    private final TrojanServerProperties.HttpStaticFileServerConfig staticFileServerConfig;
 
-    public HttpStaticFileServer(EventLoopGroup bossGroup, EventLoopGroup workerGroup) {
+    public HttpStaticFileServer(EventLoopGroup bossGroup, EventLoopGroup workerGroup, TrojanServerProperties.HttpStaticFileServerConfig staticFileServerConfig) {
         this.bossGroup = bossGroup;
         this.workerGroup = workerGroup;
+        this.staticFileServerConfig = staticFileServerConfig;
     }
 
     public Future<Void> start() throws Exception {
@@ -47,7 +49,9 @@ public class HttpStaticFileServer {
                     }
                 });
 
-        Channel ch = b.bind(PORT).asStage().get();
+        String host = staticFileServerConfig.getHost();
+        int port = staticFileServerConfig.getPort();
+        Channel ch = b.bind(host, port).asStage().get();
         return ch.closeFuture();
     }
 }
