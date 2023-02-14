@@ -14,10 +14,12 @@ import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.handler.stream.ChunkedWriteHandler;
 import io.netty5.util.concurrent.Future;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author hccake
  */
+@Slf4j
 public class HttpStaticFileServer {
 
     private static final int MAX_CONTENT_LENGTH = 65536;
@@ -38,7 +40,7 @@ public class HttpStaticFileServer {
 
         b.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
-                .handler(new LoggingHandler(LogLevel.INFO))
+                .handler(new LoggingHandler(LogLevel.DEBUG))
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) {
@@ -52,6 +54,9 @@ public class HttpStaticFileServer {
         String host = staticFileServerConfig.getHost();
         int port = staticFileServerConfig.getPort();
         Channel ch = b.bind(host, port).asStage().get();
+
+        log.info("http static file server start success, bind with {}:{}", host, port);
+
         return ch.closeFuture();
     }
 }

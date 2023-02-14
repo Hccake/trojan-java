@@ -9,12 +9,12 @@ import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.util.concurrent.Future;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author hccake
  */
+@Slf4j
 public class TrojanServer {
 
     /**
@@ -38,12 +38,15 @@ public class TrojanServer {
 
         b.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
-                .handler(new LoggingHandler(LogLevel.INFO))
+                .handler(new LoggingHandler(LogLevel.DEBUG))
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
                 .childHandler(new TrojanProxyServerInitializer(trojanServerProperties))
                 .childOption(ChannelOption.AUTO_READ, false);
 
         Channel ch = b.bind(TROJAN_PORT).asStage().get();
+
+        log.info("trojan server start success, bind with {}:{}", "0.0.0.0", TROJAN_PORT);
+
         return ch.closeFuture();
     }
 
