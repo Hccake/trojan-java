@@ -1,11 +1,13 @@
 package com.hccake.trojan.server;
 
+import ch.qos.logback.classic.Level;
 import com.hccake.trojan.server.env.CommandLineArgs;
 import com.hccake.trojan.server.env.SimpleCommandLineArgsParser;
 import com.hccake.trojan.server.env.TrojanServerProperties;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Set;
@@ -16,15 +18,17 @@ import java.util.Set;
 public final class Launcher {
 
     public static void main(String[] args) throws Exception {
-
         TrojanServerProperties trojanServerProperties = parseTrojanServerProperties(args);
-        TrojanServerProperties.HttpStaticFileServerConfig staticFileServerConfig = trojanServerProperties.getStaticFileServer();
+
+        ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger("root");
+        rootLogger.setLevel(Level.toLevel(trojanServerProperties.getLoggingLevel()));
 
         EventLoopGroup bossGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
         EventLoopGroup workerGroup = new MultithreadEventLoopGroup(NioHandler.newFactory());
 
         try {
-            if(staticFileServerConfig.isEnable()) {
+            TrojanServerProperties.HttpStaticFileServerConfig staticFileServerConfig = trojanServerProperties.getStaticFileServer();
+            if (staticFileServerConfig.isEnable()) {
                 HttpStaticFileServer httpStaticFileServer = new HttpStaticFileServer(bossGroup, workerGroup, staticFileServerConfig);
                 httpStaticFileServer.start();
             }
@@ -41,6 +45,9 @@ public final class Launcher {
         CommandLineArgs commandLineArgs = SimpleCommandLineArgsParser.parse(args);
         Set<String> optionNames = commandLineArgs.getOptionNames();
 
+        if (optionNames.contains("logging-level")) {
+            trojanServerProperties.setLoggingLevel(getStringValue(commandLineArgs, "logging-level"));
+        }
         if (optionNames.contains("passwords")) {
             trojanServerProperties.setPasswords(commandLineArgs.getOptionValues("passwords"));
         }

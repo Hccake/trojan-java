@@ -12,6 +12,10 @@ import java.util.List;
 @Data
 public class TrojanServerProperties {
 
+    /**
+     * 全局的日志级别
+     */
+    private String loggingLevel = "INFO";
 
     /**
      * trojan 用户密码，格式为 hex(SHA224(raw_password)), 默认提供一个 a123456 的密码
