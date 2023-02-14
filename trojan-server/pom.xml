@@ -104,7 +104,7 @@
                             <archive>
                                 <manifest>
                                     <mainClass>
-                                        com.hccake.trojan.server.TrojanServer
+                                        com.hccake.trojan.server.Launcher
                                     </mainClass>
                                 </manifest>
                             </archive>
