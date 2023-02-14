@@ -63,7 +63,7 @@ public final class TrojanProxyServerInitializer extends ChannelInitializer<Socke
         // 配置 ssl
         final SslContext sslCtx;
         if (StringUtils.hasText(key) && StringUtils.hasText(cert)) {
-            sslCtx = SslContextBuilder.forServer(new File(key), new File(cert), keyPassword).build();
+            sslCtx = SslContextBuilder.forServer(new File(cert), new File(key), keyPassword).build();
         } else {
             // 开发测试，用本地的 key
             InputStream keyInputStream = TrojanProxyServerInitializer.class

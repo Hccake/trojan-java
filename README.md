@@ -2,6 +2,7 @@ Trojan 协议的 java 服务端实现
 
 主要为了个人学习 netty5 的语法变化，仅供学习交流使用，不可用于其他用途，若出现任何问题，与本人无关。
 
+环境：jdk17 及 以上
 
 配置列表：
 
@@ -25,4 +26,4 @@ Trojan 协议的 java 服务端实现
 java -jar xxx.jar --ssl.key=server.key --ssl.cert=server.cert --password=xxx,yyy
 ```
 
-注意：
+注意： 证书 key 需要使用 pkcs8 格式，否则可能异常
