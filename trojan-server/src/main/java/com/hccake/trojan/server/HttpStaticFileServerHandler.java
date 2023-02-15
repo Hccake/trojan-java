@@ -102,30 +102,34 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             return;
         }
 
-        InputStream is = this.getClass().getClassLoader().getResourceAsStream(path);
-        if (is == null) {
-            sendError(ctx, NOT_FOUND);
-            return;
-        }
+        byte[] source;
 
-        // Cache Validation
-        CharSequence ifModifiedSince = request.headers().get(HttpHeaderNames.IF_MODIFIED_SINCE);
-        if (ifModifiedSince != null && ifModifiedSince.length() > 0) {
-            SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
-            Date ifModifiedSinceDate = dateFormatter.parse(ifModifiedSince.toString());
-
-            // Only compare up to the second because the datetime format we send to the client
-            // does not have milliseconds
-            long ifModifiedSinceDateSeconds = ifModifiedSinceDate.getTime() / 1000;
-            long fileLastModifiedSeconds = START_TIME.getTime() / 1000;
-            if (ifModifiedSinceDateSeconds == fileLastModifiedSeconds) {
-                sendNotModified(ctx);
+        ClassLoader classLoader = this.getClass().getClassLoader();
+        try (InputStream is = classLoader.getResourceAsStream(path);) {
+            if (is == null) {
+                sendError(ctx, NOT_FOUND);
                 return;
             }
+
+            // Cache Validation
+            CharSequence ifModifiedSince = request.headers().get(HttpHeaderNames.IF_MODIFIED_SINCE);
+            if (ifModifiedSince != null && ifModifiedSince.length() > 0) {
+                SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
+                Date ifModifiedSinceDate = dateFormatter.parse(ifModifiedSince.toString());
+
+                // Only compare up to the second because the datetime format we send to the client
+                // does not have milliseconds
+                long ifModifiedSinceDateSeconds = ifModifiedSinceDate.getTime() / 1000;
+                long fileLastModifiedSeconds = START_TIME.getTime() / 1000;
+                if (ifModifiedSinceDateSeconds == fileLastModifiedSeconds) {
+                    sendNotModified(ctx);
+                    return;
+                }
+            }
+
+            source = is.readAllBytes();
         }
 
-
-        byte[] source = is.readAllBytes();
         int fileLength = source.length;
         Buffer content = ctx.bufferAllocator().allocate(fileLength);
         content.writeBytes(source);
