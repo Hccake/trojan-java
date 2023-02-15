@@ -146,7 +146,7 @@ public final class TrojanMessageHandler extends SimpleChannelInboundHandler<Troj
 
         ChannelPipeline inboundChannelPipeline = inboundChannel.pipeline();
         inboundChannelPipeline.addLast(new RelayHandler(outboundChannel));
-        inboundChannelPipeline.remove(FlowControlHandler.class);
+        inboundChannelPipeline.removeIfExists(FlowControlHandler.class);
 
         inboundChannel.setOption(ChannelOption.AUTO_READ, true);
     }
